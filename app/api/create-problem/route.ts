@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
             }, { status: 401 })
         }
 
-        const user = getCurrentUserDetails();
+        const user = await getCurrentUserDetails();
 
         if (!user) {
             return NextResponse.json({
@@ -95,19 +95,23 @@ export async function POST(request: NextRequest) {
 
 
 
+        // Transform tags from [{value: "tag"}] to ["tag"]
+        const flatTags = Array.isArray(tags)
+            ? tags.map((t: any) => (typeof t === "string" ? t : t.value))
+            : tags;
+
         const newProblem = await prisma.problem.create({
             data: {
                 title,
                 description,
                 difficulty,
-                tags,
+                tags: flatTags,
                 examples,
                 constraints,
                 testCases,
                 codeSnippets,
                 referenceSolutions,
-                // @ts-ignore
-                userId: user.id
+                userId: (user as any).id
             }
         })
 

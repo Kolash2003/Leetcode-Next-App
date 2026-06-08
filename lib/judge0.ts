@@ -1,5 +1,5 @@
 import axios from "axios"
-import { resolve } from "path";
+
 
 export function getJudge0language(language: string) {
     const languageMap = {
@@ -14,13 +14,13 @@ export function getJudge0language(language: string) {
 export async function submitBatch(submissions: any[]) {
     const options = {
         method: 'POST',
-        url: 'https://judge0-extra-ce1.p.rapidapi.com/submissions/batch',
+        url: 'https://judge029.p.rapidapi.com/submissions/batch',
         params: {
             base64_encoded: 'false'
         },
         headers: {
             'x-rapidapi-key': '8a8207c9bcmsh870bef915f02263p1076cbjsnf20e14645285',
-            'x-rapidapi-host': 'judge0-extra-ce1.p.rapidapi.com',
+            'x-rapidapi-host': 'judge029.p.rapidapi.com',
             'Content-Type': 'application/json'
         },
         data: {
@@ -37,7 +37,7 @@ export async function pollBatchResults(tokens: string[]) {
     while (true) {
         const options = {
             method: 'GET',
-            url: 'https://judge0-extra-ce1.p.rapidapi.com/submissions/batch',
+            url: 'https://judge029.p.rapidapi.com/submissions/batch',
             params: {
                 tokens: tokens.join(","),
                 base64_encoded: 'true',
@@ -45,7 +45,7 @@ export async function pollBatchResults(tokens: string[]) {
             },
             headers: {
                 'x-rapidapi-key': '8a8207c9bcmsh870bef915f02263p1076cbjsnf20e14645285',
-                'x-rapidapi-host': 'judge0-extra-ce1.p.rapidapi.com',
+                'x-rapidapi-host': 'judge029.p.rapidapi.com',
                 'Content-Type': 'application/json'
             }
         };
