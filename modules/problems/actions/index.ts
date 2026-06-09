@@ -24,3 +24,34 @@ export const getAllProblems = async () => {
         }
     }
 }
+
+export const getProblemById = async (id: string) => {
+    try {
+        const user = await getCurrentUserDetails();
+
+        const probelm = await prisma.problem.findUnique({
+            where: {
+                id
+            }
+        })
+
+        if (!probelm) {
+            return {
+                success: false,
+                error: "Problem not found"
+            }
+        }
+
+        return {
+            success: true,
+            data: probelm
+        }
+
+    } catch (error) {
+        console.error("Error fetching problem:", error)
+        return {
+            success: false,
+            error: "Failed to fetch problem"
+        }
+    }
+}
