@@ -100,6 +100,23 @@ export const getCurrentUserDetails = async () => {
         const userDetails = await prisma.user.findUnique({
             where: {
                 clerkId: id
+            },
+            include: {
+                submissions: {
+                    orderBy: {
+                        createdAt: "desc"
+                    }
+                },
+                playlists: {
+                    orderBy: {
+                        createdAt: "desc"
+                    }
+                },
+                problemsSolved: {
+                    orderBy: {
+                        createdAT: "desc"
+                    }
+                }
             }
         });
 
@@ -110,7 +127,15 @@ export const getCurrentUserDetails = async () => {
             }
         }
 
-        return userDetails;
+        return {
+            ...userDetails,
+            solvedProblems: userDetails.problemsSolved.map(p => ({
+                id: p.id,
+                problemId: p.problemId,
+                createdAt: p.createdAT,
+                userId: p.userId
+            }))
+        };
 
     } catch (error) {
         console.log(error);

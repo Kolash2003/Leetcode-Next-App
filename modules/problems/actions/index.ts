@@ -233,3 +233,53 @@ export const getAllSubmissionByCurrentUserForProblem = async (problemId: string)
         }
     }
 }
+
+export const deleteProblem = async (id: string) => {
+    try {
+        const user = await getCurrentUserDetails();
+
+        if (!user || 'error' in user) {
+            return {
+                success: false,
+                error: "User not authenticated",
+            }
+        }
+
+        if (user.role !== "ADMIN") {
+            return {
+                success: false,
+                error: "Unauthorized: Only admins can delete problems",
+            }
+        }
+
+        // Delete related records first, then the problem
+        await prisma.$transaction([
+            prisma.testCaseResult.deleteMany({
+                where: {
+                    submission: {
+                        probelemId: id,
+                    },
+                },
+            }),
+            prisma.submission.deleteMany({
+                where: { probelemId: id },
+            }),
+            prisma.problemSolved.deleteMany({
+                where: { problemId: id },
+            }),
+            prisma.problem.delete({
+                where: { id },
+            }),
+        ]);
+
+        return {
+            success: true,
+        }
+    } catch (error) {
+        console.error("Error deleting problem:", error);
+        return {
+            success: false,
+            error: "Failed to delete problem",
+        }
+    }
+}

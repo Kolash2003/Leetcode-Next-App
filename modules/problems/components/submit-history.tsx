@@ -6,7 +6,7 @@ import { CheckCircle2, XCircle, Clock, Cpu, Code, Calendar } from "lucide-react"
 interface Submission {
     id: string;
     status: string;
-    createdAt: string;
+    createdAt: string | Date;
     language: string;
     memory: string | null;
     time: string | null;
@@ -49,7 +49,7 @@ const SubmissionHistory = ({ submissions = [] }: { submissions?: Submission[] })
         }
     };
 
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string | Date) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
