@@ -101,6 +101,7 @@ model TestCaseResult {
   compileOutput String?
   status        String?
   time          String?
+  memory        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
