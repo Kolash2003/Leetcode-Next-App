@@ -51,7 +51,7 @@ export async function pollBatchResults(tokens: string[]) {
             url: 'https://judge029.p.rapidapi.com/submissions/batch',
             params: {
                 tokens: tokens.join(","),
-                base64_encoded: 'true',
+                base64_encoded: 'false',
                 fields: '*'
             },
             headers: {

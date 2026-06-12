@@ -99,7 +99,7 @@ export const executeCode = async (
 
         const detailedResults = results.map((result: any, i: number) => {
             const stdout = result.stdout || null;
-            const expectedOut = expected_output[i];
+            const expectedOut = expected_output[i]?.trim();
             const passed = stdout === expectedOut;
 
             if (!passed) {
@@ -191,6 +191,42 @@ export const executeCode = async (
         return {
             success: false,
             error: "Failed to execute code"
+        }
+    }
+}
+
+export const getAllSubmissionByCurrentUserForProblem = async (problemId: string) => {
+    try {
+        const user = await getCurrentUserDetails();
+
+        if (!user || 'error' in user) {
+            return {
+                success: false,
+                error: "User not authenticated",
+                data: [],
+            }
+        }
+
+        const submissions = await prisma.submission.findMany({
+            where: {
+                userId: user.id,
+                probelemId: problemId,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+
+        return {
+            success: true,
+            data: submissions,
+        }
+    } catch (error) {
+        console.error("Error fetching submission history:", error);
+        return {
+            success: false,
+            error: "Failed to fetch submission history",
+            data: [],
         }
     }
 }
