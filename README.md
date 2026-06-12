@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Leetcode Next.js
+
+A LeetCode-style coding platform built with Next.js, Prisma, Clerk, and PostgreSQL. The app lets authenticated users solve problems in a browser-based editor, submit code against test cases, review submission history, manage playlists, and track progress from a personal profile dashboard.
+
+## What It Does
+
+- Browse coding problems with descriptions, examples, constraints, and difficulty labels.
+- Write and run solutions in an in-browser editor.
+- Submit solutions and review execution results and test-case output.
+- View submission history, solved problems, and playlist activity on your profile.
+- Create problems as an admin, with server-side validation against reference solutions before saving.
+- Organize problems into personal playlists.
+
+## Tech Stack
+
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Prisma + PostgreSQL
+- Clerk authentication
+- Monaco Editor
+- Tailwind CSS
+- shadcn/ui-style component set
+- Judge0-compatible code execution API
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ recommended
+- A PostgreSQL database
+- Clerk application keys
+
+### Install
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Create a local `.env` file and define the following values:
+
+```env
+DATABASE_URL=postgresql://user:password@host:5432/database
+
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
+```
+
+The codebase also integrates with a Judge0-compatible execution service for running solutions. If you rotate or externalize that integration, keep the README and runtime config in sync.
+
+### Database
+
+This repository includes a `docker-compose.yml` for local PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+The bundled compose file starts PostgreSQL on `localhost:5432` with database name `leetcode`, user `postgres`, and password `postgres123`.
+
+After the database is available, run Prisma migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+### Run Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - start the development server
+- `npm run build` - build the app for production
+- `npm run start` - start the production server
+- `npm run lint` - run ESLint
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+- `app/` - route handlers and pages
+- `modules/` - domain logic and feature components
+- `components/` - shared UI components
+- `lib/` - database and integration helpers
+- `prisma/` - schema and migration history
+- `public/` - static assets
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Main Flows
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `/` - landing page and onboarding entry point
+- `/problems` - problem list
+- `/problem/[id]` - problem solving workspace
+- `/profile` - user stats, solved problems, submissions, and playlists
+- `/create-problem` - admin-only problem creation
+- `/sign-in` and `/sign-up` - Clerk auth pages
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- The app uses Clerk to onboard users automatically when they land on the home page.
+- Admin problem creation validates reference solutions against test cases before persisting a problem.
+- Problem execution, submission history, and profile stats are all backed by Prisma models in `prisma/schema.prisma`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
