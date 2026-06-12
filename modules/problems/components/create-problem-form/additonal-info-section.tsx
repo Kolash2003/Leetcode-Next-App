@@ -4,8 +4,13 @@ import { Lightbulb } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { UseFormReturn, FieldError } from "react-hook-form";
 
-export function AdditionalInfoSection({ form }) {
+interface AdditionalInfoSectionProps {
+    form: UseFormReturn<any>;
+}
+
+export function AdditionalInfoSection({ form }: AdditionalInfoSectionProps) {
     const {
         register,
         formState: { errors },
@@ -20,7 +25,7 @@ export function AdditionalInfoSection({ form }) {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <ConstraintsField register={register} error={errors.constraints} />
+                <ConstraintsField register={register} error={errors.constraints as FieldError | undefined} />
                 <HintsField register={register} />
                 <EditorialField register={register} />
             </CardContent>
@@ -28,7 +33,7 @@ export function AdditionalInfoSection({ form }) {
     );
 }
 
-function ConstraintsField({ register, error }) {
+function ConstraintsField({ register, error }: { register: UseFormReturn<any>['register']; error?: FieldError }) {
     return (
         <div>
             <Label className="font-medium">Constraints</Label>
@@ -42,7 +47,7 @@ function ConstraintsField({ register, error }) {
     );
 }
 
-function HintsField({ register }) {
+function HintsField({ register }: { register: UseFormReturn<any>['register'] }) {
     return (
         <div>
             <Label className="font-medium">Hints (Optional)</Label>
@@ -55,7 +60,7 @@ function HintsField({ register }) {
     );
 }
 
-function EditorialField({ register }) {
+function EditorialField({ register }: { register: UseFormReturn<any>['register'] }) {
     return (
         <div>
             <Label className="font-medium">Editorial (Optional)</Label>

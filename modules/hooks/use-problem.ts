@@ -3,7 +3,7 @@ import { getProblemById } from "../problems/actions";
 
 export function useProblem(id: string) {
 
-    const [problem, setProblem] = useState(null);
+    const [problem, setProblem] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
 
@@ -14,7 +14,6 @@ export function useProblem(id: string) {
                 const problemData = await getProblemById(id);
 
                 if (problemData.success) {
-                    // @ts-ignore
                     setProblem(problemData.data);
                 }
             } catch (error) {

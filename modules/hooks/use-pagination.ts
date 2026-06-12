@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { ITEMS_PER_PAGE } from "@/modules/problems/constant";
 
-export function usePagination(items = [], itemsPerPage = ITEMS_PER_PAGE) {
+export function usePagination<T>(items: T[] = [], itemsPerPage = ITEMS_PER_PAGE) {
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = Math.ceil(items.length / itemsPerPage);
 
@@ -29,7 +29,7 @@ export function usePagination(items = [], itemsPerPage = ITEMS_PER_PAGE) {
         }
     };
 
-    const goToPage = (page) => {
+    const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
         }

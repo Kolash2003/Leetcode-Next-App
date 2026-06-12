@@ -11,6 +11,17 @@ export function getJudge0language(language: string) {
     return languageMap[language.toUpperCase() as keyof typeof languageMap];
 }
 
+export function getLanguageName(languageId: number) {
+    const LANGUAGE_NAMES = {
+        74: "TypeScript",
+        63: "JavaScript",
+        62: "Java",
+        71: "Python"
+    };
+
+    return LANGUAGE_NAMES[languageId as keyof typeof LANGUAGE_NAMES] || 'Unknown';
+}
+
 export async function submitBatch(submissions: any[]) {
     const options = {
         method: 'POST',

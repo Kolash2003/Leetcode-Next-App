@@ -1,6 +1,6 @@
 "use client";
 
-import { Controller } from "react-hook-form";
+import { Controller, UseFormReturn, Control, FieldError } from "react-hook-form";
 import { Code2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { LANGUAGES } from "../../schema";
 import { CodeEditor } from "./code-editor";
 
 
-export function LanguageSections({ form }) {
+export function LanguageSections({ form }: { form: UseFormReturn<any> }) {
     return (
         <>
             {LANGUAGES.map((language) => (
@@ -20,7 +20,7 @@ export function LanguageSections({ form }) {
     );
 }
 
-function LanguageCard({ language, form }) {
+function LanguageCard({ language, form }: { language: string; form: UseFormReturn<any> }) {
     const {
         control,
         register,
@@ -39,12 +39,12 @@ function LanguageCard({ language, form }) {
                 <StarterCodeEditor
                     language={language}
                     control={control}
-                    error={errors.codeSnippets?.[language]}
+                    error={(errors.codeSnippets as any)?.[language]}
                 />
                 <ReferenceSolutionEditor
                     language={language}
                     control={control}
-                    error={errors.referenceSolutions?.[language]}
+                    error={(errors.referenceSolutions as any)?.[language]}
                 />
                 <ExampleFields
                     language={language}
@@ -56,7 +56,7 @@ function LanguageCard({ language, form }) {
     );
 }
 
-function StarterCodeEditor({ language, control, error }) {
+function StarterCodeEditor({ language, control, error }: { language: string; control: Control<any>; error?: FieldError }) {
     return (
         <Card>
             <CardHeader>
@@ -82,7 +82,7 @@ function StarterCodeEditor({ language, control, error }) {
     );
 }
 
-function ReferenceSolutionEditor({ language, control, error }) {
+function ReferenceSolutionEditor({ language, control, error }: { language: string; control: Control<any>; error?: FieldError }) {
     return (
         <Card>
             <CardHeader>
@@ -111,7 +111,7 @@ function ReferenceSolutionEditor({ language, control, error }) {
     );
 }
 
-function ExampleFields({ language, register, errors }) {
+function ExampleFields({ language, register, errors }: { language: string; register: UseFormReturn<any>['register']; errors: any }) {
     return (
         <Card>
             <CardHeader>

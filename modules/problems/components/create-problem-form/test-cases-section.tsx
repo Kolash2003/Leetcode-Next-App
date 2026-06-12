@@ -5,8 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { UseFormReturn, UseFieldArrayReturn } from "react-hook-form";
 
-export function TestCasesSection({ form, testCasesArray }) {
+interface TestCasesSectionProps {
+    form: UseFormReturn<any>;
+    testCasesArray: UseFieldArrayReturn<any>;
+}
+
+export function TestCasesSection({ form, testCasesArray }: TestCasesSectionProps) {
     const {
         register,
         formState: { errors },
@@ -33,7 +39,7 @@ export function TestCasesSection({ form, testCasesArray }) {
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
-                {fields.map((field, index) => (
+                {fields.map((field: any, index: number) => (
                     <TestCaseCard
                         key={field.id}
                         index={index}
@@ -44,14 +50,22 @@ export function TestCasesSection({ form, testCasesArray }) {
                     />
                 ))}
                 {errors.testCases && !Array.isArray(errors.testCases) && (
-                    <p className="text-sm text-red-500">{errors.testCases.message}</p>
+                    <p className="text-sm text-red-500">{(errors.testCases as any).message}</p>
                 )}
             </CardContent>
         </Card>
     );
 }
 
-function TestCaseCard({ index, register, errors, onRemove, canRemove }) {
+interface TestCaseCardProps {
+    index: number;
+    register: UseFormReturn<any>['register'];
+    errors: any;
+    onRemove: () => void;
+    canRemove: boolean;
+}
+
+function TestCaseCard({ index, register, errors, onRemove, canRemove }: TestCaseCardProps) {
     return (
         <Card className="bg-background">
             <CardHeader className="pb-4">

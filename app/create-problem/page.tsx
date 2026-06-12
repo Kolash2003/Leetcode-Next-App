@@ -10,8 +10,7 @@ import { CreateProblemForm } from '@/modules/problems/components/create-problem-
 const CreateProblemPage = async () => {
     const user = await getCurrentUserDetails();
 
-    //@ts-ignore
-    if (user?.role !== UserRole.ADMIN) {
+    if (!user || 'error' in user || user.role !== UserRole.ADMIN) {
         redirect('/');
     }
 
@@ -24,7 +23,7 @@ const CreateProblemPage = async () => {
                     </Button>
                 </Link>
                 <h1 className='text-3xl font-bold text-amber-400'>
-                    Welcome {user?.firstName}! Create a Problem
+                    Welcome {user.firstName}! Create a Problem
                 </h1>
                 <ModeToggle />
             </div>
