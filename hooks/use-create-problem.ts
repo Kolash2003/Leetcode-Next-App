@@ -1,6 +1,6 @@
 "use client";
 
-import { useFieldArray, useForm } from "react-hook-form";
+import { FieldErrors, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,7 +48,12 @@ export function useCreateproblem() {
                 toast.success("Problem Created successfully!")
                 router.push("/problems")
             } else {
-                toast.error(data.message)
+                const failedCase = data.testCase;
+                toast.error(data.error || "Failed to create problem", {
+                    description: failedCase
+                        ? `Test case input: ${failedCase.input} | expected: ${failedCase.expectedOutput} | got: ${failedCase.actualOutput}`
+                        : undefined,
+                })
             }
 
         } catch (error) {
@@ -58,6 +63,28 @@ export function useCreateproblem() {
             setIsLoading(false);
         }
     }
+
+    const onInvalid = (errors: FieldErrors<ProblemFormValues>) => {
+        const getMessage = (error: unknown): string | undefined => {
+            if (!error || typeof error !== "object") return undefined;
+            const node = error as { message?: unknown; [key: string]: unknown };
+            if (typeof node.message === "string") return node.message;
+            if (Array.isArray(error)) {
+                for (const item of error) {
+                    const message = getMessage(item);
+                    if (message) return message;
+                }
+            }
+            for (const key of Object.keys(node)) {
+                const message = getMessage(node[key]);
+                if (message) return message;
+            }
+            return undefined;
+        };
+
+        const message = getMessage(errors) || "Please fill all required fields correctly";
+        toast.error("Cannot create problem", { description: message });
+    };
 
     const loadSampleData = () => {
         const sampleData = SAMPLE_PROBLEMS[sampleType as keyof typeof SAMPLE_PROBLEMS];
@@ -74,7 +101,7 @@ export function useCreateproblem() {
         isLoading,
         sampleType,
         setSampleType,
-        onSubmit: form.handleSubmit(onSubmit),
+        onSubmit: form.handleSubmit(onSubmit, onInvalid),
         loadSampleData,
     }
 }

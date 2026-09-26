@@ -20,6 +20,7 @@ export function CodeEditor({ value, onChange, language = "javascript" }: any) {
                     defaultLanguage={LANGUAGE_MAP[language as keyof typeof LANGUAGE_MAP]}
                     theme="vs-dark"
                     value={value}
+                    onChange={(value: string | undefined) => onChange?.(value ?? "")}
                     options={{
                         minimap: { enabled: false },
                         fontSize: 18,

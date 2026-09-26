@@ -4,7 +4,14 @@ export const problemSchema = z.object({
     title: z.string().min(3, "Title must be at least 3 characters"),
     description: z.string().min(10, "Description must be at least 10 characters"),
     difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
-    tags: z.array(z.object({ value: z.string() })).min(1, "At least one tag is required"),
+    tags: z
+        .array(
+            z.union([
+                z.string(),
+                z.object({ value: z.string() }),
+            ]),
+        )
+        .min(1, "At least one tag is required"),
     constraints: z.string().min(1, "Constraints are required"),
     hints: z.string().optional(),
     editorial: z.string().optional(),
@@ -41,9 +48,9 @@ export const problemSchema = z.object({
         JAVA: z.string().min(1, "Java solution is required"),
     }),
     referenceSolutions: z.object({
-        JAVASCRIPT: z.string().min(1, "Javascript code snippet is required"),
-        PYTHON: z.string().min(1, "Python code snippet is required"),
-        JAVA: z.string().min(1, "Java solution is required"),
+        JAVASCRIPT: z.string(),
+        PYTHON: z.string(),
+        JAVA: z.string(),
     }),
 });
 
@@ -67,9 +74,9 @@ export const defaultFormValues = {
         JAVA: "public class Solution {\n    public static void main(String[] args) {\n        // Write your code here\n    }\n}",
     },
     referenceSolutions: {
-        JAVASCRIPT: "// Add your reference solution here",
-        PYTHON: "# Add your reference solution here",
-        JAVA: "// Add your reference solution here",
+        JAVASCRIPT: "",
+        PYTHON: "",
+        JAVA: "",
     },
 };
 

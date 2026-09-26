@@ -29,7 +29,7 @@ const createProblemSchema = z.object({
         .min(1)
         .max(100),
     codeSnippets: z.record(z.string(), z.string()),
-    referenceSolutions: z.record(z.string(), z.string().min(1)),
+    referenceSolutions: z.record(z.string(), z.string()),
 });
 
 
@@ -84,7 +84,15 @@ export async function POST(request: NextRequest) {
             referenceSolutions
         } = parsedBody
 
-        for (const [language, solutionCode] of Object.entries(referenceSolutions)) {
+        // Only validate reference solutions the admin actually wrote. Untouched
+        // language editors arrive as empty strings and must not block creation.
+        const validatedReferenceSolutions: Record<string, string> = {};
+
+        for (const [language, solutionCodeRaw] of Object.entries(referenceSolutions)) {
+            const solutionCode = (solutionCodeRaw ?? "").trim();
+
+            if (!solutionCode) continue;
+
             // 1. normalize the language into the evaluation service's identifier
             const normalizedLanguage = normalizeLanguage(language);
 
@@ -97,7 +105,7 @@ export async function POST(request: NextRequest) {
 
             // 2. run the reference solution against every test case in Docker
             const res = await runCodeOnEvaluator({
-                code: solutionCode as string,
+                code: solutionCode,
                 language: normalizedLanguage,
                 testcases: testCases.map(({ input, output }: { input: string; output: string }) => ({ input, output })),
             });
@@ -127,6 +135,8 @@ export async function POST(request: NextRequest) {
                     { status: 400 },
                 );
             }
+
+            validatedReferenceSolutions[language] = solutionCode;
         }
 
 
@@ -144,7 +154,7 @@ export async function POST(request: NextRequest) {
                 constraints,
                 testCases,
                 codeSnippets,
-                referenceSolutions,
+                referenceSolutions: validatedReferenceSolutions,
                 userId: user.id
             }
         })
