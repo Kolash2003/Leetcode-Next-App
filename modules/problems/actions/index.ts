@@ -2,6 +2,7 @@
 import { getCurrentUserDetails } from "@/modules/auth/actions"
 import { prisma } from "@/lib/db"
 import { pollBatchResults, submitBatch, getLanguageName } from "@/lib/judge0";
+import { enqueueSubmission } from "@/lib/queue";
 
 export const getAllProblems = async () => {
     try {
@@ -195,6 +196,105 @@ export const executeCode = async (
             success: false,
             error: "Failed to execute code"
         }
+    }
+}
+
+/**
+ * Validates a submission, persists it as Pending and enqueues it for the
+ * evaluation service. Returns immediately — results are delivered later via
+ * the evaluation callback endpoint and surfaced through polling.
+ */
+export const submitCode = async (problemId: string, code: string) => {
+    try {
+        const user = await getCurrentUserDetails();
+
+        if (!user || 'error' in user) {
+            return { success: false, error: "User not authenticated" }
+        }
+
+        if (!code || !code.trim()) {
+            return { success: false, error: "Code cannot be empty" }
+        }
+
+        const problem = await prisma.problem.findUnique({
+            where: { id: problemId },
+        })
+
+        if (!problem) {
+            return { success: false, error: "Problem not found" }
+        }
+
+        const testCases = (problem.testCases as { input: string; output: string }[]) || []
+
+        if (!Array.isArray(testCases) || testCases.length === 0) {
+            return { success: false, error: "Problem has no test cases" }
+        }
+
+        const submission = await prisma.submission.create({
+            data: {
+                userId: user.id,
+                probelemId: problemId,
+                sourceCode: code,
+                language: "Python",
+                stdin: testCases.map((tc) => tc.input).join("\n"),
+                status: "Pending",
+            },
+        })
+
+        try {
+            await enqueueSubmission({
+                submissionId: submission.id,
+                code,
+                language: "python",
+                problem: {
+                    id: problem.id,
+                    testcases: testCases,
+                },
+            })
+        } catch (enqueueError) {
+            console.error("Failed to enqueue submission:", enqueueError);
+            await prisma.submission.update({
+                where: { id: submission.id },
+                data: { status: "Wrong Answer" },
+            })
+            return { success: false, error: "Failed to queue submission" }
+        }
+
+        return { success: true, submissionId: submission.id }
+
+    } catch (error) {
+        console.error("Error submitting code:", error)
+        return { success: false, error: "Failed to submit code" }
+    }
+}
+
+export const getSubmissionById = async (submissionId: string) => {
+    try {
+        const user = await getCurrentUserDetails();
+
+        if (!user || 'error' in user) {
+            return { success: false, error: "User not authenticated", data: null }
+        }
+
+        const submission = await prisma.submission.findFirst({
+            where: {
+                id: submissionId,
+                userId: user.id,
+            },
+            include: {
+                testCases: true,
+            },
+        })
+
+        if (!submission) {
+            return { success: false, error: "Submission not found", data: null }
+        }
+
+        return { success: true, data: submission }
+
+    } catch (error) {
+        console.error("Error fetching submission:", error)
+        return { success: false, error: "Failed to fetch submission", data: null }
     }
 }
 

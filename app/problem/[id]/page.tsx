@@ -15,7 +15,7 @@ const ProblemPage = () => {
     const params = useParams<{ id: string }>()
 
     const { problem, isLoading } = useProblem(params.id);
-    const { submissionHistory } = useSubmissionHistory(params.id);
+    const { submissionHistory, refresh: refreshSubmissionHistory } = useSubmissionHistory(params.id);
     const {
         selectedLanguage,
         setSelectedLanguage,
@@ -26,7 +26,7 @@ const ProblemPage = () => {
         isRunning,
         isSubmitting,
         executionResponse,
-    } = useEditor(problem);
+    } = useEditor(problem, "PYTHON", refreshSubmissionHistory);
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-screen">
@@ -42,7 +42,7 @@ const ProblemPage = () => {
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* LEFT Panel */}
                     <div className="space-y-6">
-                        <ProblemDescription problem={problem} selectedLanguage={"JAVASCRIPT"} />
+                        <ProblemDescription problem={problem} selectedLanguage={selectedLanguage} />
                         <ProblemTabs problem={problem} submissionHistory={submissionHistory} />
                     </div>
                     {/* RIGHT panel */}

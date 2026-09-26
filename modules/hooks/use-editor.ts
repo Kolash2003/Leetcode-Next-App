@@ -1,16 +1,21 @@
 "use client"
 
-import { getJudge0language } from "@/lib/judge0";
-import { useEffect, useState } from "react";
-import { executeCode } from "../problems/actions";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { submitCode, getSubmissionById } from "../problems/actions";
 import { toast } from "sonner";
 
-export function useEditor(problem: any, initialLanguage = "JAVASCRIPT") {
+const POLL_INTERVAL_MS = 3000;
+
+export function useEditor(problem: any, initialLanguage = "PYTHON", onSubmitted?: () => void) {
     const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage);
     const [code, setCode] = useState("");
     const [isRunning, setIsRunning] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [executionResponse, setExecutionResponse] = useState(null);
+    const [executionResponse, setExecutionResponse] = useState<any>(null);
+    const [pendingSubmissionId, setPendingSubmissionId] = useState<string | null>(null);
+
+    const onSubmittedRef = useRef(onSubmitted);
+    onSubmittedRef.current = onSubmitted;
 
     useEffect(() => {
         if (problem?.codeSnippets?.[selectedLanguage]) {
@@ -18,40 +23,70 @@ export function useEditor(problem: any, initialLanguage = "JAVASCRIPT") {
         }
     }, [problem, selectedLanguage]);
 
+    // Poll the submission until the evaluation service posts a final verdict.
+    useEffect(() => {
+        if (!pendingSubmissionId) return;
+
+        let cancelled = false;
+
+        const checkSubmission = async () => {
+            try {
+                const res = await getSubmissionById(pendingSubmissionId);
+                if (cancelled || !res.success || !res.data) return;
+
+                if (res.data.status !== "Pending") {
+                    setExecutionResponse({ submission: res.data });
+                    setPendingSubmissionId(null);
+                }
+            } catch (error) {
+                console.error("Error polling submission:", error);
+            }
+        };
+
+        checkSubmission();
+        const interval = setInterval(checkSubmission, POLL_INTERVAL_MS);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [pendingSubmissionId]);
+
     const handleRun = () => {
         toast.success("This is our assignments")
     }
 
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         if (!problem) return;
 
+        if (selectedLanguage !== "PYTHON") {
+            toast.error("Only Python is supported right now");
+            return;
+        }
+
         try {
-            setIsRunning(true);
-            const language_id = getJudge0language(selectedLanguage);
-            const stdin = problem.testCases.map((tc: any) => tc.input);
+            setIsSubmitting(true);
+            setExecutionResponse(null);
 
-            const expected_output = problem.testCases.map((tc: any) => tc.output);
+            const res = await submitCode(problem.id, code);
 
-            const res = await executeCode(
-                code,
-                language_id,
-                stdin,
-                expected_output,
-                problem.id,
-            );
-
-            if (res.success) {
-                toast.success("Code executed successfully")
+            if (!res.success) {
+                toast.error(res.error || "Failed to submit code");
+                return;
             }
 
+            toast.success("Submission queued");
+            setPendingSubmissionId(res.submissionId ?? null);
+            onSubmittedRef.current?.();
+
         } catch (error) {
-            console.error('Error executing code', error);
-            toast.error('Error executing code');
+            console.error('Error submitting code', error);
+            toast.error('Error submitting code');
         }
         finally {
-            setIsRunning(false);
+            setIsSubmitting(false);
         }
-    }
+    }, [problem, selectedLanguage, code])
 
     return {
         selectedLanguage,

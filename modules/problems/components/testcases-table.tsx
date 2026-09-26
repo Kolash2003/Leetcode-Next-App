@@ -8,6 +8,7 @@ interface TestCase {
     memory: string | null;
     time: string | null;
     stdout: string | null;
+    stout?: string | null;
     expected: string;
 }
 
@@ -50,7 +51,7 @@ export const TestCaseTable = ({ testCases }: { testCases: TestCase[] }) => {
                                 < TableCell > {testCase.memory} </TableCell>
                                 < TableCell > {testCase.time} </TableCell>
                                 < TableCell className="max-w-[200px] truncate font-mono text-sm" >
-                                    {testCase.stdout}
+                                    {testCase.stdout ?? testCase.stout}
                                 </TableCell>
                                 < TableCell className="max-w-[200px] truncate font-mono text-sm" >
                                     {testCase.expected}
