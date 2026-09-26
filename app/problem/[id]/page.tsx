@@ -7,7 +7,6 @@ import { ProblemDescription } from "@/modules/problems/components/problem-descri
 import { ProblemTabs } from "@/modules/problems/components/problem-tabs";
 import CodeEditorPanel from "@/modules/problems/components/code-editor-panel";
 import { useEditor } from "@/modules/hooks/use-editor"
-import TestCasesPanel from "@/modules/problems/components/test-cases-panel"
 import ExecutionResult from "@/modules/problems/components/execution-result"
 import { useSubmissionHistory } from "@/modules/hooks/use-submission-history"
 
@@ -58,7 +57,6 @@ const ProblemPage = () => {
                             isSubmitting={isSubmitting}
                         />
 
-                        <TestCasesPanel testCases={problem?.testCases} />
                         <ExecutionResult executionResponse={executionResponse} />
                     </div>
                 </div>

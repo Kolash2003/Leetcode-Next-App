@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 const STATUS_MAP: Record<string, string> = {
@@ -8,16 +9,27 @@ const STATUS_MAP: Record<string, string> = {
     time_limit_exceeded: "Time Limit Exceeded",
 };
 
-interface ResultPayload {
-    testCase: number;
-    passed: boolean;
-    stdout: string;
-    expected: string;
-    status: string;
-    time: string;
-    memory: string;
-    stderr: string;
-}
+const MAX_TEXT_LENGTH = 100_000;
+const MAX_TEST_CASES = 100;
+
+const resultSchema = z.object({
+    testCase: z.number().int().nonnegative(),
+    passed: z.boolean(),
+    stdout: z.string().max(MAX_TEXT_LENGTH).default(""),
+    expected: z.string().max(MAX_TEXT_LENGTH).default(""),
+    status: z.string().max(100).default(""),
+    time: z.string().max(100).default(""),
+    memory: z.string().max(100).default(""),
+    stderr: z.string().max(MAX_TEXT_LENGTH).default(""),
+});
+
+const callbackSchema = z.object({
+    submissionId: z.string().min(1).max(100),
+    status: z.string().max(50).optional(),
+    results: z.array(resultSchema).max(MAX_TEST_CASES).default([]),
+});
+
+type ResultPayload = z.infer<typeof resultSchema>;
 
 function isValidSecret(provided: string | null): boolean {
     const secret = process.env.EVALUATION_CALLBACK_SECRET;
@@ -34,19 +46,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    let body: { submissionId?: string; status?: string; results?: ResultPayload[] };
+    let body: z.infer<typeof callbackSchema>;
     try {
-        body = await request.json();
+        body = callbackSchema.parse(await request.json());
     } catch {
-        return NextResponse.json({ success: false, error: "Invalid JSON body" }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 });
     }
 
     const { submissionId, status } = body;
-    const results: ResultPayload[] = Array.isArray(body.results) ? body.results : [];
-
-    if (!submissionId) {
-        return NextResponse.json({ success: false, error: "submissionId is required" }, { status: 400 });
-    }
+    const results: ResultPayload[] = body.results;
 
     const finalStatus = STATUS_MAP[status ?? ""] ?? "Wrong Answer";
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUserDetails } from "@/modules/auth/actions";
+import { apiLimiter, checkRateLimit } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -10,6 +11,14 @@ export async function GET(request: NextRequest) {
             return NextResponse.json(
                 { success: false, error: "Unauthorized" },
                 { status: 401 },
+            );
+        }
+
+        const { success: withinLimit } = await checkRateLimit(apiLimiter, user.id);
+        if (!withinLimit) {
+            return NextResponse.json(
+                { success: false, error: "Too many requests" },
+                { status: 429 },
             );
         }
 
@@ -53,6 +62,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { success: false, error: "Unauthorized" },
                 { status: 401 },
+            );
+        }
+
+        const { success: withinLimit } = await checkRateLimit(apiLimiter, user.id);
+        if (!withinLimit) {
+            return NextResponse.json(
+                { success: false, error: "Too many requests" },
+                { status: 429 },
             );
         }
 

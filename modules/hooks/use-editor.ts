@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { submitCode, getSubmissionById } from "../problems/actions";
+import { submitCode, getSubmissionById, executeCode } from "../problems/actions";
 import { toast } from "sonner";
 
 const POLL_INTERVAL_MS = 3000;
@@ -52,23 +52,42 @@ export function useEditor(problem: any, initialLanguage = "PYTHON", onSubmitted?
         };
     }, [pendingSubmissionId]);
 
-    const handleRun = () => {
-        toast.success("This is our assignments")
-    }
+    const handleRun = useCallback(async () => {
+        if (!problem) return;
+
+        try {
+            setIsRunning(true);
+            setExecutionResponse(null);
+
+            const res = await executeCode(problem.id, code, selectedLanguage);
+
+            if (!res.success || !res.submission) {
+                toast.error(res.error || "Failed to run code");
+                return;
+            }
+
+            setExecutionResponse({ submission: res.submission });
+            toast.success(
+                res.submission.status === "Accepted"
+                    ? "All test cases passed"
+                    : "Run finished"
+            );
+        } catch (error) {
+            console.error("Error running code", error);
+            toast.error("Error running code");
+        } finally {
+            setIsRunning(false);
+        }
+    }, [problem, selectedLanguage, code])
 
     const handleSubmit = useCallback(async () => {
         if (!problem) return;
-
-        if (selectedLanguage !== "PYTHON") {
-            toast.error("Only Python is supported right now");
-            return;
-        }
 
         try {
             setIsSubmitting(true);
             setExecutionResponse(null);
 
-            const res = await submitCode(problem.id, code);
+            const res = await submitCode(problem.id, code, selectedLanguage);
 
             if (!res.success) {
                 toast.error(res.error || "Failed to submit code");

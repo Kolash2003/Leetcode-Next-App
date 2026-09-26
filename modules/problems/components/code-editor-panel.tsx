@@ -34,10 +34,8 @@ const CodeEditorPanel = ({
                                 <SelectItem
                                     key={lang.value}
                                     value={lang.value}
-                                    disabled={lang.value !== "PYTHON"}
                                 >
                                     {lang.label}
-                                    {lang.value !== "PYTHON" ? " (coming soon)" : ""}
                                 </SelectItem>
                             ))}
                         </SelectContent>

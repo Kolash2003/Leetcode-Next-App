@@ -101,6 +101,9 @@ export const getCurrentUserDetails = async () => {
             where: {
                 clerkId: id
             },
+            omit: {
+                clerkId: true,
+            },
             include: {
                 submissions: {
                     orderBy: {

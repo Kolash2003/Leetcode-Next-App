@@ -5,7 +5,7 @@ export const SUBMISSION_QUEUE = "submissionQueue";
 export interface SubmissionJob {
     submissionId: string;
     code: string;
-    language: "python";
+    language: "python" | "javascript" | "java";
     problem: {
         id: string;
         testcases: { input: string; output: string }[];

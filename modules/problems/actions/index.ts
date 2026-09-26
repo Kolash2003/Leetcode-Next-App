@@ -1,21 +1,31 @@
 "use server"
 import { getCurrentUserDetails } from "@/modules/auth/actions"
 import { prisma } from "@/lib/db"
-import { pollBatchResults, submitBatch, getLanguageName } from "@/lib/judge0";
+import { runCodeOnEvaluator, normalizeLanguage, getLanguageDisplayName } from "@/lib/evaluation";
 import { enqueueSubmission } from "@/lib/queue";
+import { checkRateLimit, codeExecutionLimiter } from "@/lib/rate-limit";
 
 export const getAllProblems = async () => {
     try {
         const user = await getCurrentUserDetails();
 
+        if (!user || 'error' in user) {
+            return {
+                success: false,
+                error: "User not authenticated"
+            }
+        }
+
         const problems = await prisma.problem.findMany({
             include: {
-                solvedBy: true,
+                solvedBy: {
+                    where: { userId: user.id },
+                },
             },
             orderBy: {
                 createdAt: "desc"
             }
-        });
+        })
 
         return {
             success: true,
@@ -34,10 +44,22 @@ export const getProblemById = async (id: string) => {
     try {
         const user = await getCurrentUserDetails();
 
+        if (!user || 'error' in user) {
+            return {
+                success: false,
+                error: "User not authenticated"
+            }
+        }
+
         const probelm = await prisma.problem.findUnique({
             where: {
                 id
-            }
+            },
+            // Never send reference solutions or the grading test cases to the client.
+            omit: {
+                referenceSolutions: true,
+                testCases: true,
+            },
         })
 
         if (!probelm) {
@@ -61,12 +83,21 @@ export const getProblemById = async (id: string) => {
     }
 }
 
+const STATUS_DISPLAY: Record<string, string> = {
+    accepted: "Accepted",
+    wrong_answer: "Wrong Answer",
+    time_limit_exceeded: "Time Limit Exceeded",
+};
+
+/**
+ * Runs code against the problem's test cases inside the evaluation service's
+ * Docker containers and returns the results. Nothing is persisted, so this is
+ * safe for the "Run" button.
+ */
 export const executeCode = async (
-    source_code: string,
-    langauge_id: number,
-    stdin: string[],
-    expected_output: string[],
-    id: string
+    problemId: string,
+    code: string,
+    language: string
 ) => {
     try {
         const user = await getCurrentUserDetails();
@@ -78,123 +109,90 @@ export const executeCode = async (
             }
         }
 
-        if (!Array.isArray(stdin) || stdin.length === 0 || !Array.isArray(expected_output) || expected_output.length !== stdin.length) {
+        if (!code || !code.trim()) {
             return {
                 success: false,
-                error: "Invalid test cases"
+                error: "Code cannot be empty"
             }
         }
 
-        const submissions = stdin.map((input: string) => ({
-            source_code,
-            langauge_id,
-            stdin: input,
-            base64_encoded: false,
-            wait: false
-        }))
-
-        const submitResponse = await submitBatch(submissions);
-
-        const tokens = submitResponse.map((res: { token: string }) => res.token)
-
-        const results = await pollBatchResults(tokens);
-
-        let allPassed = true;
-
-        const detailedResults = results.map((result: any, i: number) => {
-            const stdout = result.stdout || null;
-            const expectedOut = expected_output[i]?.trim();
-            const passed = stdout === expectedOut;
-
-            if (!passed) {
-                allPassed = false;
-            }
-
+        const { success: withinLimit } = await checkRateLimit(codeExecutionLimiter, user.id);
+        if (!withinLimit) {
             return {
-                testCase: i + 1,
-                passed,
-                stdout,
-                expected: expectedOut,
-                stderr: result.stderr || null,
-                compile_output: result.compile_output || null,
-                status: result.status.description,
-                memory: result.memory ? `${result.memory} KB` : undefined,
-                time: result.time ? `${result.time} s` : undefined,
+                success: false,
+                error: "Too many requests. Please slow down."
             }
-        })
-
-        const submission = await prisma.submission.create({
-            data: {
-                userId: user.id,
-                probelemId: id,
-                sourceCode: source_code,
-                language: getLanguageName(langauge_id),
-                stdin: stdin.join("\n"),
-                stdout: JSON.stringify(detailedResults.map((r: any) => r.stdout)),
-                stderr: detailedResults.some((r: any) => r.stderr)
-                    ? JSON.stringify(detailedResults.map((r: any) => r.stderr))
-                    : null,
-                compileOutput: detailedResults.some((r: any) => r.compile_output)
-                    ? JSON.stringify(detailedResults.map((r: any) => r.compile_output))
-                    : null,
-                status: allPassed ? "Accepted" : "Wrong Answer",
-                memory: detailedResults.some((r: any) => r.memory)
-                    ? JSON.stringify(detailedResults.map((r: any) => r.memory))
-                    : null,
-                time: detailedResults.some((r: any) => r.time)
-                    ? JSON.stringify(detailedResults.map((r: any) => r.time))
-                    : null,
-            },
-        });
-
-        if (allPassed) {
-            await prisma.problemSolved.upsert({
-                where: {
-                    userId_problemId: {
-                        userId: user.id,
-                        problemId: id
-                    }
-                },
-                update: {},
-                create: {
-                    userId: user.id,
-                    problemId: id,
-                }
-            })
         }
 
+        const normalizedLanguage = normalizeLanguage(language);
+        if (!normalizedLanguage) {
+            return {
+                success: false,
+                error: "Unsupported language"
+            }
+        }
 
-        const testCaseResults = detailedResults.map((result: any) => ({
-            submissionId: submission.id,
-            testCase: result.testCase,
-            passed: result.passed,
-            stdout: result.stdout,
-            expected: result.expected,
-            stderr: result.stderr,
-            compileOutput: result.compile_output,
-            status: result.status,
-            memory: result.memory,
-            time: result.time,
-        }));
-
-        await prisma.testCaseResult.createMany({ data: testCaseResults });
-
-        const submissionWithTestCases = await prisma.submission.findUnique({
-            where: { id: submission.id },
-            include: {
-                testCases: true,
-            },
+        const problem = await prisma.problem.findUnique({
+            where: { id: problemId },
         });
+
+        if (!problem) {
+            return {
+                success: false,
+                error: "Problem not found"
+            }
+        }
+
+        const testcases = (problem.testCases as { input: string; output: string }[]) || [];
+
+        if (!Array.isArray(testcases) || testcases.length === 0) {
+            return {
+                success: false,
+                error: "Problem has no test cases"
+            }
+        }
+
+        const res = await runCodeOnEvaluator({
+            code,
+            language: normalizedLanguage,
+            testcases,
+        });
+
+        if (!res.success || !res.results) {
+            return {
+                success: false,
+                error: res.error || "Failed to run code"
+            }
+        }
 
         return {
             success: true,
-            submission: submissionWithTestCases,
+            submission: {
+                id: `run-${Date.now()}`,
+                status: STATUS_DISPLAY[res.status ?? ""] ?? "Wrong Answer",
+                createdAt: new Date().toISOString(),
+                language: getLanguageDisplayName(normalizedLanguage),
+                memory: JSON.stringify(res.results.map((r) => r.memory ?? null)),
+                time: JSON.stringify(res.results.map((r) => r.time ?? null)),
+                testCases: res.results.map((r) => ({
+                    id: `run-${r.testCase}`,
+                    testCase: r.testCase,
+                    passed: r.passed,
+                    stdout: r.stdout,
+                    expected: r.expected,
+                    stderr: r.stderr,
+                    status: r.status,
+                    memory: r.memory,
+                    time: r.time,
+                })),
+            },
         };
 
     } catch (error) {
+        console.error("Error running code:", error);
         return {
             success: false,
-            error: "Failed to execute code"
+            error: "Failed to run code"
         }
     }
 }
@@ -204,7 +202,7 @@ export const executeCode = async (
  * evaluation service. Returns immediately — results are delivered later via
  * the evaluation callback endpoint and surfaced through polling.
  */
-export const submitCode = async (problemId: string, code: string) => {
+export const submitCode = async (problemId: string, code: string, language: string) => {
     try {
         const user = await getCurrentUserDetails();
 
@@ -214,6 +212,16 @@ export const submitCode = async (problemId: string, code: string) => {
 
         if (!code || !code.trim()) {
             return { success: false, error: "Code cannot be empty" }
+        }
+
+        const normalizedLanguage = normalizeLanguage(language);
+        if (!normalizedLanguage) {
+            return { success: false, error: "Unsupported language" }
+        }
+
+        const { success: withinLimit } = await checkRateLimit(codeExecutionLimiter, user.id);
+        if (!withinLimit) {
+            return { success: false, error: "Too many requests. Please slow down." }
         }
 
         const problem = await prisma.problem.findUnique({
@@ -235,7 +243,7 @@ export const submitCode = async (problemId: string, code: string) => {
                 userId: user.id,
                 probelemId: problemId,
                 sourceCode: code,
-                language: "Python",
+                language: getLanguageDisplayName(normalizedLanguage),
                 stdin: testCases.map((tc) => tc.input).join("\n"),
                 status: "Pending",
             },
@@ -245,7 +253,7 @@ export const submitCode = async (problemId: string, code: string) => {
             await enqueueSubmission({
                 submissionId: submission.id,
                 code,
-                language: "python",
+                language: normalizedLanguage,
                 problem: {
                     id: problem.id,
                     testcases: testCases,
