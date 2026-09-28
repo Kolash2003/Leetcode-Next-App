@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { submitCode, getSubmissionById, executeCode } from "../problems/actions";
+import { submitCode, getSubmissionById } from "../problems/actions";
 import { toast } from "sonner";
 
 const POLL_INTERVAL_MS = 3000;
@@ -9,7 +9,6 @@ const POLL_INTERVAL_MS = 3000;
 export function useEditor(problem: any, initialLanguage = "PYTHON", onSubmitted?: () => void) {
     const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage);
     const [code, setCode] = useState("");
-    const [isRunning, setIsRunning] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [executionResponse, setExecutionResponse] = useState<any>(null);
     const [pendingSubmissionId, setPendingSubmissionId] = useState<string | null>(null);
@@ -52,34 +51,6 @@ export function useEditor(problem: any, initialLanguage = "PYTHON", onSubmitted?
         };
     }, [pendingSubmissionId]);
 
-    const handleRun = useCallback(async () => {
-        if (!problem) return;
-
-        try {
-            setIsRunning(true);
-            setExecutionResponse(null);
-
-            const res = await executeCode(problem.id, code, selectedLanguage);
-
-            if (!res.success || !res.submission) {
-                toast.error(res.error || "Failed to run code");
-                return;
-            }
-
-            setExecutionResponse({ submission: res.submission });
-            toast.success(
-                res.submission.status === "Accepted"
-                    ? "All test cases passed"
-                    : "Run finished"
-            );
-        } catch (error) {
-            console.error("Error running code", error);
-            toast.error("Error running code");
-        } finally {
-            setIsRunning(false);
-        }
-    }, [problem, selectedLanguage, code])
-
     const handleSubmit = useCallback(async () => {
         if (!problem) return;
 
@@ -112,9 +83,7 @@ export function useEditor(problem: any, initialLanguage = "PYTHON", onSubmitted?
         setSelectedLanguage,
         code,
         setCode,
-        handleRun,
         handleSubmit,
-        isRunning,
         isSubmitting,
         executionResponse,
     }

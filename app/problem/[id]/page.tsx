@@ -20,9 +20,7 @@ const ProblemPage = () => {
         setSelectedLanguage,
         code,
         setCode,
-        handleRun,
         handleSubmit,
-        isRunning,
         isSubmitting,
         executionResponse,
     } = useEditor(problem, "PYTHON", refreshSubmissionHistory);
@@ -51,9 +49,7 @@ const ProblemPage = () => {
                             onCodeChange={setCode}
                             selectedLanguage={selectedLanguage}
                             onLanguageChange={setSelectedLanguage}
-                            onRun={handleRun}
                             onSubmit={handleSubmit}
-                            isRunning={isRunning}
                             isSubmitting={isSubmitting}
                         />
 

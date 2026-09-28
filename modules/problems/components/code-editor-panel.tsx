@@ -11,9 +11,7 @@ const CodeEditorPanel = ({
     onCodeChange,
     selectedLanguage,
     onLanguageChange,
-    onRun,
     onSubmit,
-    isRunning,
     isSubmitting
 }: any) => {
     const { theme } = useTheme();
@@ -56,15 +54,6 @@ const CodeEditorPanel = ({
                     />
                 </div>
                 <div className='flex gap-3 mt-4'>
-                    <Button
-                        onClick={onRun}
-                        disabled={isRunning}
-                        variant={"outline"}
-                        className='flex items-center gap-2'
-                    >
-                        {isRunning ? "Running..." : "Run"}
-                    </Button>
-
                     <Button
                         variant={"default"}
                         onClick={onSubmit}
